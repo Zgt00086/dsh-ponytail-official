@@ -1,0 +1,73 @@
+# dsh-ponytail-official
+
+[DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) 官方正文的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件。
+
+技能正文与 always-on 规则**逐字同步自上游 tag**，不做任何改写或裁剪。当前对齐：**v5.3.3**
+
+## 它做什么
+
+- **always-on 规则注入**：官方 `AGENTS.md` 原文，经 `systemPrompt.section`（order 50）进入每个会话
+- **6 个 skill**：`/ponytail`、`/ponytail-review`、`/ponytail-audit`、`/ponytail-debt`、`/ponytail-gain`、`/ponytail-help`
+- 零 tool 注册、零配置面、零落盘状态——卸载即彻底消失，不留任何文件
+
+## 安装
+
+```powershell
+# 1. 克隆到本地插件目录（路径随意，示例用 D:\dsh-plugins）
+git clone https://github.com/Zgt00086/dsh-ponytail-official.git D:\dsh-plugins\dsh-ponytail-official
+
+# 2. 在 profile 的 package.json 里挂两处（C:\Users\<你>\.dsh\profiles\<profile>\package.json）
+#    dependencies 加:        "dsh-ponytail-official": "link:D:/dsh-plugins/dsh-ponytail-official"
+#    dsh.profile.bundles 加:  "dsh-ponytail-official"
+
+# 3. 建链接（开发者模式或管理员 PowerShell）
+New-Item -ItemType SymbolicLink `
+  -Path "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-ponytail-official" `
+  -Target "D:\dsh-plugins\dsh-ponytail-official"
+
+# 4. 重启 DSH
+```
+
+生效判据：DSH 日志出现 `[ponytail-official] 已激活`，会话输入 `/` 能看到 6 个 ponytail 技能。
+
+`yaml` 依赖已 vendor 在 `node_modules/yaml`，克隆后无需 `npm install` 即可运行。
+
+## 更新（跟官方新版本）
+
+```powershell
+# 先更新上游真源
+git -C D:\ponytail-upstream fetch --tags --force
+
+# 再同步进插件（默认跟最新 tag，也可 -Tag v5.4.0 指定）
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\dsh-plugins\dsh-ponytail-official\update-from-upstream.ps1
+```
+
+脚本从上游 clone 读取 `skills/` 与 `AGENTS.md`，覆盖进插件并对齐 `package.json` 版本号。
+上游路径默认取插件同级目录的 `ponytail-upstream`，找不到再找 `D:\ponytail-upstream`，也可用 `-Upstream <path>` 指定。
+
+## 卸载
+
+```powershell
+Remove-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-ponytail-official" -Force
+# 再从 package.json 删掉 dependencies 与 bundles 两处条目，重启 DSH
+```
+
+## 与 @wenaixi/dsh-ponytail 的关系
+
+两者互为替代，不要同时装（技能同名冲突）。本插件只做官方正文的搬运，
+不提供档位切换、配置面板与零缓存破坏——那些是 wenaixi 版自己的工程。
+
+## 结构
+
+```
+lib/index.js              插件入口：注册 SkillProvider + 注入 AGENTS.md
+skills/                   6 个 SKILL.md（上游原文）
+AGENTS.md                 上游规则原文
+cordis.patch.yml          bundle 挂载声明
+update-from-upstream.ps1  上游同步脚本
+node_modules/yaml         vendored 依赖（自包含）
+```
+
+## License
+
+MIT，见 [LICENSE](LICENSE)。`skills/`、`AGENTS.md` 内容版权归 Dietrich Gebert，随上游 MIT 许可分发。

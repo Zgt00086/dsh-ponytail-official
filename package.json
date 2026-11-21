@@ -1,0 +1,43 @@
+{
+  "name": "dsh-ponytail-official",
+  "version": "5.3.3",
+  "description": "DietrichGebert/ponytail official ruleset and six skills for DeepSeek Harness, self-maintained local plugin. Content synced verbatim from upstream tag v5.3.3.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "skills/",
+    "AGENTS.md",
+    "cordis.patch.yml",
+    "update-from-upstream.ps1",
+    "README.md"
+  ],
+  "scripts": {
+    "update-from-upstream": "powershell -NoProfile -ExecutionPolicy Bypass -File ./update-from-upstream.ps1"
+  },
+  "dependencies": {
+    "yaml": "^2.4.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.1.0 <5"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "ponytail"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}
