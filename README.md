@@ -34,7 +34,15 @@ New-Item -ItemType SymbolicLink `
 
 ## 接收上游更新通知
 
-上游发新版时怎么第一时间知道，三条路可以叠加用：
+**每次 DSH 启动时自动检查一次**：插件加载时异步请求
+`https://github.com/DietrichGebert/ponytail/releases/latest`，跟随 302 拿到最新 tag，
+超过 6 秒或网络不可达就静默跳过（不阻塞启动、不报错）。
+检测到落后时做两件事：
+
+- `ctx.logger.warn` 打印：`上游有新版本：vX.Y.Z（当前 vA.B.C）`
+- 在 system prompt 里追加一行提示，模型会在回复里顺带告诉你
+
+上游发新版时怎么第一时间知道，三条云端通道可以叠加用：
 
 | 方式 | 通知落点 | 时效 | 配置 |
 |---|---|---|---|
@@ -45,7 +53,7 @@ New-Item -ItemType SymbolicLink `
 
 `upstream-watch` 工作流每周五跑一次：拉上游 tag 列表、跟 `package.json` 版本比对，
 落后就自动开一个 issue，正文里带版本对照、Release 链接和完整更新命令。
-想立刻测一次：仓库页 Actions → upstream-watch → Run workflow。
+想立刻测一次：仓库页 Actions → upstream-watch → Run workflow → 勾 `simulate_behind`。
 
 上游 Releases RSS：`https://github.com/DietrichGebert/ponytail/releases.atom`
 
