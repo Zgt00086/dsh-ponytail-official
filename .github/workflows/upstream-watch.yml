@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 12 * * 5'
   workflow_dispatch:
+    inputs:
+      simulate_behind:
+        description: '测试开关：强制按落后处理（会真实开一个 issue）'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -39,12 +44,13 @@ jobs:
         run: |
           LOCAL="v${{ steps.local.outputs.version }}"
           LATEST="${{ steps.upstream.outputs.latest }}"
-          if [ "$LOCAL" = "$LATEST" ]; then
+          SIMULATE="${{ inputs.simulate_behind }}"
+          if [ "$LOCAL" = "$LATEST" ] && [ "$SIMULATE" != "true" ]; then
             echo "behind=false" >> "$GITHUB_OUTPUT"
             echo "已对齐上游: $LOCAL"
           else
             echo "behind=true" >> "$GITHUB_OUTPUT"
-            echo "落后上游: $LOCAL -> $LATEST"
+            echo "落后上游: $LOCAL -> $LATEST（模拟开关: ${SIMULATE:-未设置}）"
           fi
 
       - name: 创建更新提醒 issue
