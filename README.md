@@ -32,6 +32,25 @@ New-Item -ItemType SymbolicLink `
 
 `yaml` 依赖已 vendor 在 `node_modules/yaml`，克隆后无需 `npm install` 即可运行。
 
+## 桌面通知
+
+插件挂了两个 Windows 右下角 toast（`notify.ps1`，无额外模块依赖）：
+
+| 触发 | 事件 | 前台判断 |
+|---|---|---|
+| 一轮对话跑完 | `turn/end` | DSH 窗口在前台时**不弹**，切出去才提醒 |
+| 一轮对话出错 | `agent/error` | 同上 |
+| 上游有新版本 | 启动检查 | 强制弹（`-Force`），前台也提示 |
+
+toast 以 `ai.deepseek.dsh.desktop` 的 AUMID 发送，跟随 DSH 在 Windows 通知设置里的权限。
+前台判断用 `GetForegroundWindow` + `GetWindowThreadProcessId`，进程名匹配 `DeepSeek|dsh` 就静默退出。
+
+单独测试一条：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\dsh-plugins\dsh-ponytail-official\notify.ps1 -Title 测试 -Message 通知通道自检 -Force
+```
+
 ## 接收上游更新通知
 
 **每次 DSH 启动时自动检查一次**：插件加载时异步请求
