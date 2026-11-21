@@ -1,0 +1,94 @@
+name: upstream-watch
+
+on:
+  schedule:
+    - cron: '0 12 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 读取本地版本
+        id: local
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "本地版本: v$VERSION"
+
+      - name: 查询上游最新 tag
+        id: upstream
+        run: |
+          TAGS=$(git ls-remote --tags --refs https://github.com/DietrichGebert/ponytail.git | sed 's#.*refs/tags/##')
+          if [ -z "$TAGS" ]; then
+            echo "无法获取上游 tag 列表"
+            exit 1
+          fi
+          LATEST=$(printf '%s\n' "$TAGS" | sort -V | tail -n1)
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "上游最新: $LATEST"
+
+      - name: 对比版本
+        id: diff
+        run: |
+          LOCAL="v${{ steps.local.outputs.version }}"
+          LATEST="${{ steps.upstream.outputs.latest }}"
+          if [ "$LOCAL" = "$LATEST" ]; then
+            echo "behind=false" >> "$GITHUB_OUTPUT"
+            echo "已对齐上游: $LOCAL"
+          else
+            echo "behind=true" >> "$GITHUB_OUTPUT"
+            echo "落后上游: $LOCAL -> $LATEST"
+          fi
+
+      - name: 创建更新提醒 issue
+        if: steps.diff.outputs.behind == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST="${{ steps.upstream.outputs.latest }}"
+          LOCAL="${{ steps.local.outputs.version }}"
+          EXISTS=$(gh issue list --state open --search "${LATEST} in:title" --json number --jq 'length')
+          if [ "$EXISTS" != "0" ]; then
+            echo "已存在 ${LATEST} 的提醒 issue，跳过"
+            exit 0
+          fi
+          {
+            echo "上游 DietrichGebert/ponytail 发布了新版本。"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| 本插件当前 | v${LOCAL} |"
+            echo "| 上游最新 | ${LATEST} |"
+            echo ""
+            echo "Release 说明: https://github.com/DietrichGebert/ponytail/releases/tag/${LATEST}"
+            echo ""
+            echo "## 周末更新步骤"
+            echo ""
+            echo "1. 更新上游真源"
+            echo ""
+            echo "   git -C D:/ponytail-upstream fetch --tags --force"
+            echo ""
+            echo "2. 同步进插件"
+            echo ""
+            echo "   powershell -NoProfile -ExecutionPolicy Bypass -File D:/dsh-plugins/dsh-ponytail-official/update-from-upstream.ps1"
+            echo ""
+            echo "3. 提交并推送"
+            echo ""
+            echo "   cd D:/dsh-plugins/dsh-ponytail-official"
+            echo "   git add -A"
+            echo "   git commit -m \"sync: upstream ${LATEST}\""
+            echo "   git push"
+            echo ""
+            echo "4. 重启 DSH，确认 / 菜单里 6 个技能都在。"
+            echo ""
+            echo "---"
+            echo "本 issue 由 upstream-watch 工作流自动创建。更新完成后手动关闭即可。"
+          } > /tmp/issue.md
+          gh issue create --title "上游有新版本 ${LATEST}（当前 v${LOCAL}）" --body-file /tmp/issue.md

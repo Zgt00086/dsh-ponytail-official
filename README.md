@@ -32,6 +32,23 @@ New-Item -ItemType SymbolicLink `
 
 `yaml` 依赖已 vendor 在 `node_modules/yaml`，克隆后无需 `npm install` 即可运行。
 
+## 接收上游更新通知
+
+上游发新版时怎么第一时间知道，三条路可以叠加用：
+
+| 方式 | 通知落点 | 时效 | 配置 |
+|---|---|---|---|
+| 本仓库 GitHub Actions 每周五检查 | GitHub issue → 手机 app 推送 | 每周五 20:00（北京时间） | 已内置，无需配置 |
+| Watch 本仓库（Custom → Issues） | 手机 app 推送 | 新 issue 即时 | 仓库页 Watch → Custom |
+| Watch 上游 + Releases only | 手机 app 推送 | 上游发版即时 | 上游页 Watch → Custom → Releases |
+| RSS | RSS 阅读器 | 即时 | 订阅 releases.atom |
+
+`upstream-watch` 工作流每周五跑一次：拉上游 tag 列表、跟 `package.json` 版本比对，
+落后就自动开一个 issue，正文里带版本对照、Release 链接和完整更新命令。
+想立刻测一次：仓库页 Actions → upstream-watch → Run workflow。
+
+上游 Releases RSS：`https://github.com/DietrichGebert/ponytail/releases.atom`
+
 ## 更新（跟官方新版本）
 
 ```powershell
