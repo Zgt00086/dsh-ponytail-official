@@ -6,6 +6,15 @@
 
 $ErrorActionPreference = 'Stop'
 $Aumid = 'ai.deepseek.dsh.desktop'
+$LogFile = Join-Path $env:TEMP 'ponytail-notify.log'
+
+function Write-NotifyLog {
+    param([string]$Text)
+    try {
+        $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
+        Add-Content -Path $LogFile -Value "$stamp | $Text" -Encoding UTF8
+    } catch { }
+}
 
 function Show-Toast {
     param([string]$T, [string]$M)
@@ -21,6 +30,8 @@ function Show-Toast {
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($Aumid).Show($toast)
 }
 
+Write-NotifyLog "start title=$Title force=$Force"
+
 try {
     if (-not $Force) {
         Add-Type -TypeDefinition @'
@@ -35,17 +46,22 @@ public static class PonytailFg {
         $h = [PonytailFg]::GetForegroundWindow()
         $fgPid = [uint32]0
         [void][PonytailFg]::GetWindowThreadProcessId($h, [ref]$fgPid)
+        $procName = '(none)'
         if ($fgPid -ne 0) {
-            $procName = ''
-            try { $procName = (Get-Process -Id $fgPid -ErrorAction Stop).ProcessName } catch { $procName = '' }
-            if ($procName -match 'DeepSeek|dsh') { exit 0 }
+            try { $procName = (Get-Process -Id $fgPid -ErrorAction Stop).ProcessName } catch { $procName = '(unknown)' }
+        }
+        Write-NotifyLog "foreground=$procName"
+        if ($procName -match 'DeepSeek|dsh') {
+            Write-NotifyLog 'skip: DSH is foreground'
+            exit 0
         }
     }
 
     Show-Toast -T $Title -M $Message
+    Write-NotifyLog 'sent'
 }
 catch {
-    # 通知失败不影响主流程，静默退出
+    Write-NotifyLog "error: $($_.Exception.Message)"
 }
 
 exit 0
