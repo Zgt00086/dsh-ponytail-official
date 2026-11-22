@@ -1,7 +1,8 @@
 ﻿param(
     [string]$Title = 'DeepSeek Harness',
     [string]$Message = '',
-    [switch]$Force
+    [switch]$Force,
+    [string]$Payload = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,6 +15,21 @@ function Write-NotifyLog {
         $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
         Add-Content -Path $LogFile -Value "$stamp | $Text" -Encoding UTF8
     } catch { }
+}
+
+Write-NotifyLog "boot pid=$PID payload=$Payload"
+
+if ($Payload -ne '' -and (Test-Path -LiteralPath $Payload)) {
+    try {
+        $json = [System.IO.File]::ReadAllText($Payload, [System.Text.Encoding]::UTF8)
+        $obj = $json | ConvertFrom-Json
+        if ($obj.title) { $Title = [string]$obj.title }
+        if ($obj.message) { $Message = [string]$obj.message }
+        if ($obj.force -eq $true) { $Force = [switch]$true }
+        Write-NotifyLog "payload loaded title=$Title"
+    } catch {
+        Write-NotifyLog "payload parse error: $($_.Exception.Message)"
+    }
 }
 
 function Show-Toast {
